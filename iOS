@@ -1,0 +1,82 @@
+//
+//  ViewController.swift
+//  SmartFurnace
+//
+//  Created by Aldin Secic on 18/03/15.
+//  Copyright (c) 2015 Aldin Secic. All rights reserved.
+//
+
+import UIKit
+
+class ViewController: UIViewController {
+
+   
+    @IBOutlet weak var labelRt: UILabel!
+    @IBOutlet weak var labelFt: UILabel!
+    @IBOutlet weak var labelInstructions: UILabel!
+    
+    var jsonRt: String!
+    var jsonFt: String!
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        getTemperatures()
+}
+
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+    func getTemperatures(){
+        
+        var urlAsString = "http://192.168.1.125"
+        var url = NSURL(string: urlAsString)
+        var urlSession = NSURLSession.sharedSession()
+        
+        var jsonQuery = urlSession.dataTaskWithURL(url!, completionHandler: { data, response, error -> Void in
+            if (error != nil){
+                println(error.localizedDescription)
+            }
+            var err: NSError?
+            var jsonResult = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.MutableContainers, error: &err) as NSDictionary
+            if(err != nil){
+                println("JSON Error \(err!.localizedDescription)")
+            }
+            self.jsonRt = jsonResult["roomTemperature"] as NSString
+            self.jsonFt = jsonResult["furnaceTemperature"] as NSString
+            dispatch_async(dispatch_get_main_queue(), {
+                self.labelRt.text = "\(self.jsonRt)ºC"
+                self.labelFt.text = "\(self.jsonFt)ºC"
+            })
+            
+        })
+        jsonQuery.resume()
+        
+    }
+
+    @IBAction func btnAction(sender: AnyObject) {
+        var alert = UIAlertController(title: "TIPS", message:
+            "Air flow\n\nSMALL AMOUNTS OF SMOKE IS A GOOD SIGN\n\nA CLEAN WOOD STOVE IS A WARM WOOD STOVE\n\nDIFFERENT TYPES OF WOOD PROVIDE DIFFERENT LEVELS OF HEAT\n\nLIGHTING FROM THE TOP IS BETTER\n\nALWAYS MORE THAN ONE LOG", preferredStyle: UIAlertControllerStyle.Alert)
+        alert.addAction(UIAlertAction(title: "Close", style: UIAlertActionStyle.Default, handler: nil))
+        self.presentViewController(alert, animated: false, completion: nil)
+    }
+    @IBAction func btnRefresh(sender: AnyObject) {
+        getTemperatures()      
+        
+        if self.jsonRt.toInt() < 15 {
+            labelInstructions.text = "Your house is cold, light a fire!"
+        }
+        if (self.jsonRt.toInt() > 16 && self.jsonRt.toInt() < 21){
+            self.labelInstructions.text = "Your house is cool, warm it up more!"
+        }
+        if (self.jsonRt.toInt() > 21 && self.jsonRt.toInt() < 26) {
+            labelInstructions.text = "Your house temperature is perfect!"
+        }
+        if (self.jsonRt.toInt() > 26 && self.jsonRt.toInt() < 30){
+            labelInstructions.text = "Your house is very warm, slow down with logs!"
+        }
+        if self.jsonRt.toInt() > 30 {
+            labelInstructions.text = "Your house is extemely warm, stop adding logs!"
+        }
+    }
+}
